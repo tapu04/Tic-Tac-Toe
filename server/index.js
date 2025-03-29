@@ -132,7 +132,10 @@ wss.on("connection", (ws) => {
     });
 });
 
+// Set up PORT dynamically
+const PORT = process.env.PORT || 5000;
+
 // Start the server
-server.listen(5000, "localhost", () => {
-    console.log("✅ Server is running on http://localhost:5000/");
+server.listen(PORT, () => {
+    console.log(`✅ Server is running on port ${PORT}`);
 });
