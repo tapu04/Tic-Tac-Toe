@@ -1,4 +1,3 @@
-//server/index.js
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
@@ -13,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send("WebSocket Multiplayer Tic-Tac-Toe Server is Running...");
+    res.send("✅ WebSocket Multiplayer Tic-Tac-Toe Server is Running...");
 });
 
 // Store game rooms
@@ -40,6 +39,7 @@ const checkWinner = (gameState) => {
 // Handle WebSocket connections
 wss.on("connection", (ws) => {
     let playerRoom = null;
+    let playerSymbol = null;
 
     ws.on("message", (message) => {
         const data = JSON.parse(message);
@@ -48,13 +48,26 @@ wss.on("connection", (ws) => {
         if (data.type === "join") {
             let roomId = data.roomId || uuidv4();
             if (!rooms[roomId]) {
-                rooms[roomId] = { players: [], gameState: Array(9).fill(null), currentPlayer: "X", winner: null };
+                rooms[roomId] = {
+                    players: [],
+                    gameState: Array(9).fill(null),
+                    currentPlayer: "X",
+                    winner: null,
+                    chatMessages: [] // Store chat history
+                };
             }
 
             if (rooms[roomId].players.length < 2) {
+                playerSymbol = rooms[roomId].players.length === 0 ? "X" : "O";
                 rooms[roomId].players.push(ws);
                 playerRoom = roomId;
-                ws.send(JSON.stringify({ type: "player", symbol: rooms[roomId].players.length === 1 ? "X" : "O", roomId }));
+
+                ws.send(JSON.stringify({
+                    type: "player",
+                    symbol: playerSymbol,
+                    roomId,
+                    chatHistory: rooms[roomId].chatMessages // Send chat history to new player
+                }));
             } else {
                 ws.send(JSON.stringify({ type: "full", roomId }));
             }
@@ -84,6 +97,19 @@ wss.on("connection", (ws) => {
             }
         }
 
+        // Handle chat messages
+        if (data.type === "chat" && rooms[playerRoom]) {
+            const chatMessage = `${playerSymbol}: ${data.message}`; // Ensure only one symbol is added
+            rooms[playerRoom].chatMessages.push(chatMessage); // Store chat history
+
+            rooms[playerRoom].players.forEach((player) => {
+                player.send(JSON.stringify({
+                    type: "chat",
+                    message: `${playerSymbol}: ${data.message}`
+                }));
+            });
+        }
+
         // Reset game
         if (data.type === "reset" && rooms[playerRoom]) {
             rooms[playerRoom].gameState = Array(9).fill(null);
@@ -106,9 +132,7 @@ wss.on("connection", (ws) => {
     });
 });
 
-// Bind to external IP address
+// Start the server
 server.listen(5000, "localhost", () => {
     console.log("✅ Server is running on http://localhost:5000/");
 });
-
-//made by Bhabani Shankar Jena

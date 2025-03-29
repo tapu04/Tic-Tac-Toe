@@ -11,6 +11,8 @@ const App = () => {
   const [roomId, setRoomId] = useState("");
   const [joinedRoom, setJoinedRoom] = useState(false);
   const [message, setMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
 
   useEffect(() => {
     socket.onmessage = (event) => {
@@ -21,12 +23,17 @@ const App = () => {
         setRoomId(data.roomId);
         setJoinedRoom(true);
         setMessage(`You are Player ${data.symbol} in Room ${data.roomId}`);
+        setChatMessages(data.chatHistory || []);
       }
 
       if (data.type === "update") {
         setGameState(data.gameState);
         setCurrentTurn(data.currentPlayer);
         setWinner(data.winner);
+      }
+
+      if (data.type === "chat") {
+        setChatMessages((prev) => [...prev, data.message]);
       }
 
       if (data.type === "reset") {
@@ -38,12 +45,13 @@ const App = () => {
   }, []);
 
   const joinRoom = () => {
-    const newRoomId = roomId || Math.random().toString(36).substr(2, 5);
-    socket.send(JSON.stringify({ type: "join", roomId: newRoomId }));
+    if (roomId.trim()) {
+      socket.send(JSON.stringify({ type: "join", roomId }));
+    }
   };
 
   const handleClick = (index) => {
-    if (!winner && gameState[index] === null && playerSymbol === currentTurn) {
+    if (gameState[index] === null && currentTurn === playerSymbol && !winner) {
       socket.send(JSON.stringify({ type: "move", index, symbol: playerSymbol }));
     }
   };
@@ -52,9 +60,10 @@ const App = () => {
     socket.send(JSON.stringify({ type: "reset" }));
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      joinRoom();
+  const sendMessage = () => {
+    if (chatInput.trim()) {
+      socket.send(JSON.stringify({ type: "chat", message: chatInput, playerSymbol }));
+      setChatInput("");
     }
   };
 
@@ -62,38 +71,59 @@ const App = () => {
     <div className="container">
       <h1>Multiplayer Tic-Tac-Toe</h1>
       {!joinedRoom ? (
-        <div>
+        <div className="room-join">
           <input
             type="text"
             placeholder="Enter Room ID"
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => e.key === "Enter" && joinRoom()}
           />
           <button onClick={joinRoom}>Join / Create Room</button>
         </div>
       ) : (
-        <>
-          <p>{message}</p>
-          {winner && <p className="winner">🎉 {winner === "draw" ? "It's a Draw!" : `Winner: ${winner}`}</p>}
-          <div className="board">
-            {gameState.map((cell, index) => (
-              <div key={index} className="cell" onClick={() => handleClick(index)}>
-                {cell}
-              </div>
-            ))}
-          </div>
-          <div className="current-turn">
+        <div className="game-chat-wrapper">
+          {/* Game Board Section */}
+          <div className="game-container">
+            <p>{message}</p>
+            {winner && <p className="winner">🎉 {winner === "draw" ? "It's a Draw!" : `Winner: ${winner}`}</p>}
+            <div className="board">
+              {gameState.map((cell, index) => (
+                <div
+                  key={index}
+                  className="cell"
+                  data-value={cell}
+                  onClick={() => handleClick(index)}
+                >
+                  {cell}
+                </div>
+              ))}
+            </div>
             <p>Current Turn: {currentTurn}</p>
+            <button onClick={handleReset}>Reset Game</button>
           </div>
-          <button onClick={handleReset}>Reset Game</button>
-        </>
+
+          {/* Chat Section */}
+          <div className="chat-container">
+            <h2>Chat</h2>
+            <div className="chat-messages">
+              {chatMessages.map((msg, idx) => (
+                <p key={idx}>{msg}</p>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Type a message..."
+            />
+            <button onClick={sendMessage}>Send</button>
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
 export default App;
-
-
-//made by Bhabani Shankar Jena
