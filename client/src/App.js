@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 
-const socket = new WebSocket("ws://localhost:5000");
+const socket = new WebSocket("wss://tic-tac-toe-backend-cfhj.onrender.com");
 
 const App = () => {
   const [gameState, setGameState] = useState(Array(9).fill(null));
