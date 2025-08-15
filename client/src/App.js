@@ -22,9 +22,13 @@ export default function App() {
   const opponentName = symbol === "X" ? playerNames["O"] : playerNames["X"];
 
   useEffect(() => {
-    const socket = new WebSocket(
-      process.env.REACT_APP_WS_URL || "ws://localhost:5000"
-    );
+    const wsUrl =
+      process.env.REACT_APP_WS_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "wss://tic-tac-toe-backend-cfhj.onrender.com"
+        : "ws://localhost:5000");
+
+    const ws = new WebSocket(wsUrl);
 
     setSocket(ws);
 
