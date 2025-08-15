@@ -3,8 +3,8 @@
 A real-time multiplayer Tic-Tac-Toe game with an integrated live chat feature, built using **React** (frontend) and **Node.js + WebSockets** (backend).  
 The game allows two players to join a room, play in real time, and communicate via live chat.  
 
-🚀 **Live Demo:** tic-tac-toe-froentend.onrender.com
-💻 **GitHub Repository:** github.com/tapu04/Tic-Tac-Toe  
+🚀 **Live Demo:** [tic-tac-toe-froentend.onrender.com](https://tic-tac-toe-froentend.onrender.com)  
+💻 **GitHub Repository:** [github.com/tapu04/Tic-Tac-Toe](https://github.com/tapu04/Tic-Tac-Toe)  
 
 ---
 
