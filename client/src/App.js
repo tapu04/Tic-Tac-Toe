@@ -1,129 +1,138 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import Home from "./components/Home";
+import CreateRoom from "./components/CreateRoom";
+import JoinRoom from "./components/JoinRoom";
+import WaitingRoom from "./components/WaitingRoom";
+import GameBoard from "./components/GameBoard";
 
-const socket = new WebSocket("wss://tic-tac-toe-backend-cfhj.onrender.com");
-
-const App = () => {
-  const [gameState, setGameState] = useState(Array(9).fill(null));
-  const [playerSymbol, setPlayerSymbol] = useState(null);
-  const [currentTurn, setCurrentTurn] = useState("X");
-  const [winner, setWinner] = useState(null);
+export default function App() {
+  const [socket, setSocket] = useState(null);
+  const [stage, setStage] = useState("home");
+  const [name, setName] = useState("");
   const [roomId, setRoomId] = useState("");
-  const [joinedRoom, setJoinedRoom] = useState(false);
-  const [message, setMessage] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [playerNames, setPlayerNames] = useState({});
+  const [gameState, setGameState] = useState(Array(9).fill(null));
+  const [currentPlayer, setCurrentPlayer] = useState("X");
+  const [winner, setWinner] = useState(null);
+  const [winningPattern, setWinningPattern] = useState([]); // NEW
   const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
+
+  const opponentName = symbol === "X" ? playerNames["O"] : playerNames["X"];
 
   useEffect(() => {
-    socket.onmessage = (event) => {
+    const socket = new WebSocket(
+      process.env.REACT_APP_WS_URL || "ws://localhost:5000"
+    );
+
+    setSocket(ws);
+
+    ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if (data.type === "player") {
-        setPlayerSymbol(data.symbol);
-        setRoomId(data.roomId);
-        setJoinedRoom(true);
-        setMessage(`You are Player ${data.symbol} in Room ${data.roomId}`);
-        setChatMessages(data.chatHistory || []);
-      }
-
-      if (data.type === "update") {
-        setGameState(data.gameState);
-        setCurrentTurn(data.currentPlayer);
-        setWinner(data.winner);
-      }
-
-      if (data.type === "chat") {
-        setChatMessages((prev) => [...prev, data.message]);
-      }
-
-      if (data.type === "reset") {
-        setGameState(Array(9).fill(null));
-        setCurrentTurn("X");
-        setWinner(null);
+      switch (data.type) {
+        case "player":
+          setSymbol(data.symbol);
+          setRoomId(data.roomId);
+          setName(data.name);
+          setPlayerNames(data.playerNames || {});
+          setStage("waiting");
+          break;
+        case "start":
+          setPlayerNames(data.playerNames);
+          setCurrentPlayer(data.currentPlayer);
+          setStage("game");
+          break;
+        case "update":
+          setGameState(data.gameState);
+          setCurrentPlayer(data.currentPlayer);
+          setWinner(data.winner);
+          setWinningPattern(data.winningPattern || []); // NEW
+          break;
+        case "chat":
+          setChatMessages((prev) => [...prev, data.message]);
+          break;
+        case "reset":
+          setGameState(data.gameState);
+          setCurrentPlayer(data.currentPlayer);
+          setPlayerNames(data.playerNames);
+          setSymbol(data.symbol);
+          setWinner(null);
+          setWinningPattern([]); // NEW
+          break;
+        case "error":
+          alert(data.message);
+          break;
+        default:
+          break;
       }
     };
+
+    return () => ws.close();
   }, []);
 
-  const joinRoom = () => {
-    if (roomId.trim()) {
-      socket.send(JSON.stringify({ type: "join", roomId }));
+  const makeMove = (index) => {
+    if (gameState[index] === null && currentPlayer === symbol && !winner) {
+      socket.send(JSON.stringify({ type: "move", index, symbol }));
     }
   };
 
-  const handleClick = (index) => {
-    if (gameState[index] === null && currentTurn === playerSymbol && !winner) {
-      socket.send(JSON.stringify({ type: "move", index, symbol: playerSymbol }));
-    }
-  };
-
-  const handleReset = () => {
-    socket.send(JSON.stringify({ type: "reset" }));
-  };
-
-  const sendMessage = () => {
-    if (chatInput.trim()) {
-      socket.send(JSON.stringify({ type: "chat", message: chatInput, playerSymbol }));
-      setChatInput("");
-    }
+  const sendChat = (message) => {
+    if (!message.trim()) return;
+    socket.send(JSON.stringify({ type: "chat", message }));
   };
 
   return (
     <div className="container">
-      <h1>Multiplayer Tic-Tac-Toe</h1>
-      {!joinedRoom ? (
-        <div className="room-join">
-          <input
-            type="text"
-            placeholder="Enter Room ID"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && joinRoom()}
+      {stage === "home" && <Home setStage={setStage} />}
+      {stage === "createName" && (
+        <CreateRoom socket={socket} playerName={name} setPlayerName={setName} />
+      )}
+      {stage === "joinName" && (
+        <JoinRoom
+          socket={socket}
+          playerName={name}
+          setPlayerName={setName}
+          roomId={roomId}
+          setRoomId={setRoomId}
+        />
+      )}
+      {stage === "waiting" && (
+        <WaitingRoom
+          roomId={roomId}
+          name={name}
+          symbol={symbol}
+          opponentName={opponentName}
+        />
+      )}
+      {stage === "game" && (
+        <div className="game-container">
+          <GameBoard
+            socket={socket}
+            gameState={gameState}
+            makeMove={makeMove}
+            symbol={symbol}
+            playerNames={playerNames}
+            winner={winner}
+            currentPlayer={currentPlayer}
+            winningPattern={winningPattern} // NEW
+            chatMessages={chatMessages}
+            sendChat={sendChat}
           />
-          <button onClick={joinRoom}>Join / Create Room</button>
         </div>
-      ) : (
-        <div className="game-chat-wrapper">
-          {/* Game Board Section */}
-          <div className="game-container">
-            <p>{message}</p>
-            {winner && <p className="winner">🎉 {winner === "draw" ? "It's a Draw!" : `Winner: ${winner}`}</p>}
-            <div className="board">
-              {gameState.map((cell, index) => (
-                <div
-                  key={index}
-                  className="cell"
-                  data-value={cell}
-                  onClick={() => handleClick(index)}
-                >
-                  {cell}
-                </div>
-              ))}
-            </div>
-            <p>Current Turn: {currentTurn}</p>
-            <button onClick={handleReset}>Reset Game</button>
-          </div>
-
-          {/* Chat Section */}
-          <div className="chat-container">
-            <h2>Chat</h2>
-            <div className="chat-messages">
-              {chatMessages.map((msg, idx) => (
-                <p key={idx}>{msg}</p>
-              ))}
-            </div>
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Type a message..."
-            />
-            <button onClick={sendMessage}>Send</button>
+      )}
+      {winner && (
+        <div className="winner-overlay" onClick={() => setWinner(null)}>
+          <div className="winner-message">
+            🎉 Winner: {playerNames[winner]} 🎉
+            <br />
+            <small>(Click anywhere to close)</small>
           </div>
         </div>
       )}
+
+
     </div>
   );
-};
-
-export default App;
+}
