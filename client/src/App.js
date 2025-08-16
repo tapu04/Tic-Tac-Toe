@@ -25,7 +25,7 @@ export default function App() {
     const wsUrl =
       process.env.REACT_APP_WS_URL ||
       (process.env.NODE_ENV === "production"
-        ? "wss://tic-tac-toe-backend-cfhj.onrender.com"
+        ? "wss://tic-tac-toe-94fc.onrender.com"
         : "ws://localhost:5000");
 
     const ws = new WebSocket(wsUrl);
