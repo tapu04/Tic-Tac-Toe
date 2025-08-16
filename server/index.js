@@ -1,7 +1,13 @@
+const express = require("express");
+const path = require("path");
+const http = require("http");
 const WebSocket = require("ws");
 
-const wss = new WebSocket.Server({ port: 5000 });
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
+// --- Game Data ---
 const rooms = {};
 
 function checkWinner(gameState) {
@@ -23,17 +29,18 @@ function checkWinner(gameState) {
             gameState[a] === gameState[b] &&
             gameState[a] === gameState[c]
         ) {
-            return { winner: gameState[a], pattern }; // WINNER + PATTERN
+            return { winner: gameState[a], pattern };
         }
     }
 
-    if (gameState.every(cell => cell !== null)) {
-        return { winner: "draw", pattern: [] }; // DRAW
+    if (gameState.every((cell) => cell !== null)) {
+        return { winner: "draw", pattern: [] };
     }
 
     return { winner: null, pattern: [] };
 }
 
+// --- WebSocket Logic ---
 wss.on("connection", (ws) => {
     ws.on("message", (message) => {
         const data = JSON.parse(message);
@@ -45,18 +52,20 @@ wss.on("connection", (ws) => {
                     players: [ws],
                     gameState: Array(9).fill(null),
                     currentPlayer: "X",
-                    playerNames: { X: data.name, O: "" }
+                    playerNames: { X: data.name, O: "" },
                 };
                 ws.roomId = roomId;
                 ws.symbol = "X";
                 ws.playerName = data.name;
-                ws.send(JSON.stringify({
-                    type: "player",
-                    symbol: "X",
-                    roomId,
-                    name: data.name,
-                    playerNames: rooms[roomId].playerNames
-                }));
+                ws.send(
+                    JSON.stringify({
+                        type: "player",
+                        symbol: "X",
+                        roomId,
+                        name: data.name,
+                        playerNames: rooms[roomId].playerNames,
+                    })
+                );
                 break;
 
             case "join":
@@ -68,19 +77,22 @@ wss.on("connection", (ws) => {
                     ws.playerName = data.name;
                     room.playerNames.O = data.name;
 
-                    // Notify both players
-                    room.players.forEach(player => {
-                        player.send(JSON.stringify({
-                            type: "start",
-                            playerNames: room.playerNames,
-                            currentPlayer: room.currentPlayer
-                        }));
+                    room.players.forEach((player) => {
+                        player.send(
+                            JSON.stringify({
+                                type: "start",
+                                playerNames: room.playerNames,
+                                currentPlayer: room.currentPlayer,
+                            })
+                        );
                     });
                 } else {
-                    ws.send(JSON.stringify({
-                        type: "error",
-                        message: "Room is full or doesn't exist"
-                    }));
+                    ws.send(
+                        JSON.stringify({
+                            type: "error",
+                            message: "Room is full or doesn't exist",
+                        })
+                    );
                 }
                 break;
 
@@ -88,30 +100,37 @@ wss.on("connection", (ws) => {
                 const moveRoom = rooms[ws.roomId];
                 if (!moveRoom) return;
 
-                if (moveRoom.currentPlayer === data.symbol && moveRoom.gameState[data.index] === null) {
+                if (
+                    moveRoom.currentPlayer === data.symbol &&
+                    moveRoom.gameState[data.index] === null
+                ) {
                     moveRoom.gameState[data.index] = data.symbol;
                     const { winner, pattern } = checkWinner(moveRoom.gameState);
 
                     if (winner) {
-                        moveRoom.players.forEach(player => {
-                            player.send(JSON.stringify({
-                                type: "update",
-                                gameState: moveRoom.gameState,
-                                currentPlayer: moveRoom.currentPlayer,
-                                winner,
-                                winningPattern: pattern
-                            }));
+                        moveRoom.players.forEach((player) => {
+                            player.send(
+                                JSON.stringify({
+                                    type: "update",
+                                    gameState: moveRoom.gameState,
+                                    currentPlayer: moveRoom.currentPlayer,
+                                    winner,
+                                    winningPattern: pattern,
+                                })
+                            );
                         });
                     } else {
                         moveRoom.currentPlayer = data.symbol === "X" ? "O" : "X";
-                        moveRoom.players.forEach(player => {
-                            player.send(JSON.stringify({
-                                type: "update",
-                                gameState: moveRoom.gameState,
-                                currentPlayer: moveRoom.currentPlayer,
-                                winner: null,
-                                winningPattern: []
-                            }));
+                        moveRoom.players.forEach((player) => {
+                            player.send(
+                                JSON.stringify({
+                                    type: "update",
+                                    gameState: moveRoom.gameState,
+                                    currentPlayer: moveRoom.currentPlayer,
+                                    winner: null,
+                                    winningPattern: [],
+                                })
+                            );
                         });
                     }
                 }
@@ -120,11 +139,13 @@ wss.on("connection", (ws) => {
             case "chat":
                 const chatRoom = rooms[ws.roomId];
                 if (!chatRoom) return;
-                chatRoom.players.forEach(player => {
-                    player.send(JSON.stringify({
-                        type: "chat",
-                        message: `${ws.playerName}: ${data.message}`
-                    }));
+                chatRoom.players.forEach((player) => {
+                    player.send(
+                        JSON.stringify({
+                            type: "chat",
+                            message: `${ws.playerName}: ${data.message}`,
+                        })
+                    );
                 });
                 break;
 
@@ -133,18 +154,17 @@ wss.on("connection", (ws) => {
                 if (!resetRoom) return;
                 resetRoom.gameState = Array(9).fill(null);
                 resetRoom.currentPlayer = "X";
-                resetRoom.players.forEach(player => {
-                    player.send(JSON.stringify({
-                        type: "reset",
-                        gameState: resetRoom.gameState,
-                        currentPlayer: resetRoom.currentPlayer,
-                        playerNames: resetRoom.playerNames,
-                        symbol: player.symbol
-                    }));
+                resetRoom.players.forEach((player) => {
+                    player.send(
+                        JSON.stringify({
+                            type: "reset",
+                            gameState: resetRoom.gameState,
+                            currentPlayer: resetRoom.currentPlayer,
+                            playerNames: resetRoom.playerNames,
+                            symbol: player.symbol,
+                        })
+                    );
                 });
-                break;
-
-            default:
                 break;
         }
     });
@@ -152,7 +172,7 @@ wss.on("connection", (ws) => {
     ws.on("close", () => {
         if (ws.roomId && rooms[ws.roomId]) {
             const room = rooms[ws.roomId];
-            room.players = room.players.filter(p => p !== ws);
+            room.players = room.players.filter((p) => p !== ws);
             if (room.players.length === 0) {
                 delete rooms[ws.roomId];
             }
@@ -160,4 +180,15 @@ wss.on("connection", (ws) => {
     });
 });
 
-console.log("✅ WebSocket server running on ws://localhost:5000");
+// --- Serve React Frontend ---
+app.use(express.static(path.join(__dirname, "client", "build")));
+
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+});
+
+// --- Start Server ---
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () =>
+    console.log(`✅ Server running on http://localhost:${PORT}`)
+);
