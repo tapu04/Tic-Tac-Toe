@@ -4,11 +4,19 @@
     "private": true,
     "scripts": {
         "start": "node server/index.js",
-        "server": "npm run dev --prefix server",
+        "server": "node server/index.js",
         "client": "npm start --prefix client",
+        "client-install": "npm install --prefix client",
+        "build": "npm run client-install && npm run build --prefix client",
         "dev": "concurrently \"npm run server\" \"npm run client\""
     },
+    "dependencies": {
+        "express": "^4.21.2",
+        "ws": "^8.18.0",
+        "cors": "^2.8.5",
+        "uuid": "^11.0.5"
+    },
     "devDependencies": {
-        "concurrently": "^8.2.2"
+        "concurrently": "^9.0.0"
     }
 }
