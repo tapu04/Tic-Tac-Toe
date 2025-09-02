@@ -53,6 +53,7 @@ wss.on("connection", (ws) => {
                     gameState: Array(9).fill(null),
                     currentPlayer: "X",
                     playerNames: { X: data.name, O: "" },
+                    starter: "X" // Add the starter property
                 };
                 ws.roomId = roomId;
                 ws.symbol = "X";
@@ -152,8 +153,12 @@ wss.on("connection", (ws) => {
             case "reset":
                 const resetRoom = rooms[ws.roomId];
                 if (!resetRoom) return;
+
+                // Alternate starter each reset
+                resetRoom.starter = resetRoom.starter === "X" ? "O" : "X";
+                resetRoom.currentPlayer = resetRoom.starter;
                 resetRoom.gameState = Array(9).fill(null);
-                resetRoom.currentPlayer = "X";
+
                 resetRoom.players.forEach((player) => {
                     player.send(
                         JSON.stringify({
@@ -166,6 +171,7 @@ wss.on("connection", (ws) => {
                     );
                 });
                 break;
+
         }
     });
 

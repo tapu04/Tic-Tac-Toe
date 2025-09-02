@@ -3,9 +3,9 @@ import React from "react";
 export default function CreateRoom({ socket, playerName, setPlayerName }) {
     const createRoom = () => {
         if (!playerName.trim()) return alert("Enter your name");
-        if (socket.readyState === WebSocket.OPEN) {
+        if (socket && socket.readyState === 1) { // WebSocket.OPEN is 1
             socket.send(JSON.stringify({ type: "create", name: playerName.trim() }));
-        } else {
+        } else if (socket) {
             socket.onopen = () => socket.send(JSON.stringify({ type: "create", name: playerName.trim() }));
         }
     };

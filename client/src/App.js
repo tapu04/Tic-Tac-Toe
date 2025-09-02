@@ -25,55 +25,69 @@ export default function App() {
     const wsUrl =
       process.env.REACT_APP_WS_URL ||
       (process.env.NODE_ENV === "production"
-        ? "wss://tic-tac-toe-94fc.onrender.com"
+        ? window.location.origin.replace(/^http/, 'ws')
         : "ws://localhost:5000");
 
-    const ws = new WebSocket(wsUrl);
+    try {
+      const ws = new WebSocket(wsUrl);
 
-    setSocket(ws);
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        alert("Connection error. Please try again later.");
+      };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      setSocket(ws);
 
-      switch (data.type) {
-        case "player":
-          setSymbol(data.symbol);
-          setRoomId(data.roomId);
-          setName(data.name);
-          setPlayerNames(data.playerNames || {});
-          setStage("waiting");
-          break;
-        case "start":
-          setPlayerNames(data.playerNames);
-          setCurrentPlayer(data.currentPlayer);
-          setStage("game");
-          break;
-        case "update":
-          setGameState(data.gameState);
-          setCurrentPlayer(data.currentPlayer);
-          setWinner(data.winner);
-          setWinningPattern(data.winningPattern || []); // NEW
-          break;
-        case "chat":
-          setChatMessages((prev) => [...prev, data.message]);
-          break;
-        case "reset":
-          setGameState(data.gameState);
-          setCurrentPlayer(data.currentPlayer);
-          setPlayerNames(data.playerNames);
-          setSymbol(data.symbol);
-          setWinner(null);
-          setWinningPattern([]); // NEW
-          break;
-        case "error":
-          alert(data.message);
-          break;
-        default:
-          break;
-      }
-    };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
 
-    return () => ws.close();
+        switch (data.type) {
+          case "player":
+            setSymbol(data.symbol);
+            setRoomId(data.roomId);
+            setName(data.name);
+            setPlayerNames(data.playerNames || {});
+            setStage("waiting");
+            break;
+          case "start":
+
+            setPlayerNames(data.playerNames);
+            setCurrentPlayer(data.currentPlayer);
+
+            setStage("game");
+            break;
+          case "update":
+            setGameState(data.gameState);
+            setCurrentPlayer(data.currentPlayer);
+            setWinner(data.winner);
+            setWinningPattern(data.winningPattern || []); // NEW
+            break;
+          case "chat":
+            setChatMessages((prev) => [...prev, data.message]);
+            break;
+          case "reset":
+            setGameState(data.gameState);
+            setCurrentPlayer(data.currentPlayer);
+            setPlayerNames(data.playerNames);
+            setSymbol(data.symbol);
+            setWinner(null);
+            setWinningPattern([]); // NEW
+            break;
+          case "error":
+            alert(data.message);
+            break;
+          default:
+            break;
+        }
+      };
+
+      return () => {
+        if (ws) ws.close();
+      };
+    } catch (error) {
+      console.error("WebSocket initialization error:", error);
+      alert("Failed to connect to the game server. Please try again later.");
+    }
   }, []);
 
   const makeMove = (index) => {
@@ -129,7 +143,15 @@ export default function App() {
       {winner && (
         <div className="winner-overlay" onClick={() => setWinner(null)}>
           <div className="winner-message">
-            🎉 Winner: {playerNames[winner]} 🎉
+            {winner === "draw" ? (
+              <>
+                🤝 It's a Draw! 🤝
+              </>
+            ) : (
+              <>
+                🎉 Winner: {playerNames[winner]} 🎉
+              </>
+            )}
             <br />
             <small>(Click anywhere to close)</small>
           </div>
