@@ -50,10 +50,11 @@ export default function App() {
             setStage("waiting");
             break;
           case "start":
-
             setPlayerNames(data.playerNames);
             setCurrentPlayer(data.currentPlayer);
-
+            setGameState(Array(9).fill(null)); // Ensure game state is reset
+            setWinner(null);
+            setWinningPattern([]);
             setStage("game");
             break;
           case "update":
@@ -91,8 +92,12 @@ export default function App() {
   }, []);
 
   const makeMove = (index) => {
+    // Check if it's the player's turn and the cell is empty
     if (gameState[index] === null && currentPlayer === symbol && !winner) {
+      // Send the move to the server
       socket.send(JSON.stringify({ type: "move", index, symbol }));
+    } else if (gameState[index] === null && currentPlayer !== symbol && !winner) {
+      console.log("Not your turn yet. Current player:", currentPlayer);
     }
   };
 

@@ -84,6 +84,7 @@ wss.on("connection", (ws) => {
                                 type: "start",
                                 playerNames: room.playerNames,
                                 currentPlayer: room.currentPlayer,
+                                gameState: room.gameState,
                             })
                         );
                     });
@@ -101,6 +102,7 @@ wss.on("connection", (ws) => {
                 const moveRoom = rooms[ws.roomId];
                 if (!moveRoom) return;
 
+                // Check if it's the player's turn and if the cell is empty
                 if (
                     moveRoom.currentPlayer === data.symbol &&
                     moveRoom.gameState[data.index] === null
