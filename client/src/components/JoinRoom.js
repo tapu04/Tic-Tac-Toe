@@ -3,10 +3,23 @@ import React from "react";
 export default function JoinRoom({ socket, playerName, setPlayerName, roomId, setRoomId }) {
     const joinRoom = () => {
         if (!playerName.trim() || !roomId.trim()) return alert("Enter both name and room ID");
-        if (socket && socket.readyState === 1) { // WebSocket.OPEN is 1
+
+        // Check if socket exists
+        if (!socket) {
+            return alert("Connection to server not established. Please refresh the page.");
+        }
+
+        // Check if socket is open
+        if (socket.readyState === 1) { // WebSocket.OPEN is 1
+            console.log(`Attempting to join room: ${roomId.trim()} as ${playerName.trim()}`);
             socket.send(JSON.stringify({ type: "join", name: playerName.trim(), roomId: roomId.trim() }));
-        } else if (socket) {
-            socket.onopen = () => socket.send(JSON.stringify({ type: "join", name: playerName.trim(), roomId: roomId.trim() }));
+        } else {
+            console.log(`Socket not ready. Current state: ${socket.readyState}`);
+            alert("Connection to server not ready. Please wait a moment and try again.");
+            socket.onopen = () => {
+                console.log("Socket opened. Now sending join request.");
+                socket.send(JSON.stringify({ type: "join", name: playerName.trim(), roomId: roomId.trim() }));
+            };
         }
     };
 

@@ -81,8 +81,15 @@ export default function App() {
             break;
           case "error":
             alert(data.message);
+            console.error("Server error:", data.message);
+            break;
+          case "notification":
+            // Handle notification messages (like player disconnects)
+            console.log("Notification:", data.message);
+            alert(data.message);
             break;
           default:
+            console.log("Unknown message type:", data.type);
             break;
         }
       };
