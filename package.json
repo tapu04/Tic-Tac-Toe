@@ -1,0 +1,22 @@
+{
+    "name": "tic-tac-toe",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start": "node server/index.js",
+        "server": "node server/index.js",
+        "client": "npm start --prefix client",
+        "client-install": "npm install --prefix client",
+        "build": "cd client && npm install && npm run build",
+        "dev": "concurrently \"npm run server\" \"npm run client\""
+    },
+    "dependencies": {
+        "express": "^4.21.2",
+        "ws": "^8.18.0",
+        "cors": "^2.8.5",
+        "uuid": "^11.0.5"
+    },
+    "devDependencies": {
+        "concurrently": "^9.0.0"
+    }
+}
