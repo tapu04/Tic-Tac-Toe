@@ -85,6 +85,7 @@ wss.on("connection", (ws) => {
                                 playerNames: room.playerNames,
                                 currentPlayer: room.currentPlayer,
                                 gameState: room.gameState,
+                                symbol: player.symbol, // Include the player's symbol in the start message
                             })
                         );
                     });

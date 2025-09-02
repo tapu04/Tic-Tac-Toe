@@ -47,6 +47,7 @@ export default function App() {
             setRoomId(data.roomId);
             setName(data.name);
             setPlayerNames(data.playerNames || {});
+            console.log(`Player assigned: symbol=${data.symbol}, name=${data.name}`);
             setStage("waiting");
             break;
           case "start":
@@ -55,6 +56,10 @@ export default function App() {
             setGameState(Array(9).fill(null)); // Ensure game state is reset
             setWinner(null);
             setWinningPattern([]);
+            // Make sure symbol is correctly set for both players
+            if (!symbol) {
+              setSymbol(data.symbol || symbol);
+            }
             setStage("game");
             break;
           case "update":
@@ -89,15 +94,20 @@ export default function App() {
       console.error("WebSocket initialization error:", error);
       alert("Failed to connect to the game server. Please try again later.");
     }
-  }, []);
+  }, [symbol]); // Add symbol as a dependency
 
   const makeMove = (index) => {
     // Check if it's the player's turn and the cell is empty
-    if (gameState[index] === null && currentPlayer === symbol && !winner) {
-      // Send the move to the server
-      socket.send(JSON.stringify({ type: "move", index, symbol }));
-    } else if (gameState[index] === null && currentPlayer !== symbol && !winner) {
-      console.log("Not your turn yet. Current player:", currentPlayer);
+    if (gameState[index] === null && !winner) {
+      if (currentPlayer === symbol) {
+        // Send the move to the server
+        console.log(`Making move: index=${index}, symbol=${symbol}, currentPlayer=${currentPlayer}`);
+        socket.send(JSON.stringify({ type: "move", index, symbol }));
+      } else {
+        console.log(`Not your turn: your symbol=${symbol}, currentPlayer=${currentPlayer}`);
+      }
+    } else if (gameState[index] !== null) {
+      console.log("Cell already occupied");
     }
   };
 
